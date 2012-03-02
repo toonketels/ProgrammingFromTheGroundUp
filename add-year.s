@@ -30,6 +30,25 @@ int $LINUX_SYSCALL
 
 movl %eax, ST_INPUT_DESCRIPTOR(%ebp)
 
+#Error checking, neg numbers are error codes
+cmpl $0, %eax
+jg continue_processing
+
+#Send the error
+.section .data
+no_open_file_code:
+.ascii "0001: \0"
+no_open_file_msg:
+.ascii "Can't open input file\0"
+
+.section .text
+pushl $no_open_file_msg
+pushl $no_open_file_code
+call error_exit
+
+continue_processing:
+
+
 #Open file for writing
 movl $SYS_OPEN, %eax
 movl $output_file_name, %ebx
