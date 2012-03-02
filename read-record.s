@@ -17,7 +17,7 @@
 
 read_record:
 pushl %ebp			#Save old base pointer
-pushl %esp, %ebp		#Reset the base pointer
+movl %esp, %ebp			#Reset the base pointer
 
 pushl %ebx			#Save value of %ebx
 movl ST_FILEDES(%ebp), %ebx
