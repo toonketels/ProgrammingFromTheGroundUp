@@ -5,14 +5,20 @@
 file_name:
 .ascii "test.dat\0"
 
-.section .bss
-.lcomm record_buffer, RECORD_SIZE
+record_buffer_ptr:
+.long 0
+
 
 .section .text
 .globl _start
 _start:
 .equ ST_INPUT_DESCRIPTOR, -4
 .equ ST_OUTPUT_DESCRIPTOR, -8
+
+call allocate_init				#Initalize memory manager
+pushl $RECORD_SIZE
+call allocate
+movl %eax, record_buffer_ptr
 
 movl %esp, %ebp
 subl $8, %esp					#Make room for local vars
@@ -30,20 +36,24 @@ movl $STDOUT, ST_OUTPUT_DESCRIPTOR(%ebp)	#Save output file descriptor
 
 record_read_loop:
 pushl ST_INPUT_DESCRIPTOR(%ebp)
-pushl $record_buffer
+pushl record_buffer_ptr				#Pass the pointer to our memory
 call read_record
 addl $8, %esp
 
 cmpl $RECORD_SIZE, %eax				#returns number of bytes read
 jne finished_reading 				#if it's not the same number as requested
 						#its and end of file or error, so quit
-pushl $RECORD_FIRSTNAME + record_buffer		#print out first name, first know its size
+						#print out first name, first know its size
+movl record_buffer_ptr, %eax
+addl $RECORD_FIRSTNAME, %eax
+pushl %eax
 call count_chars
 addl $4, %esp
 movl %eax, %edx
 movl ST_OUTPUT_DESCRIPTOR(%ebp), %ebx
 movl $SYS_WRITE, %eax
-movl $RECORD_FIRSTNAME + record_buffer, %ecx
+movl record_buffer_ptr, %ecx
+addl $RECORD_FIRSTNAME, %ecx
 int $LINUX_SYSCALL
 
 push ST_OUTPUT_DESCRIPTOR(%ebp)
@@ -53,6 +63,8 @@ addl $4, %esp
 jmp record_read_loop
 
 finished_reading:
+pushl record_buffer_ptr
+call deallocate
 movl $SYS_EXIT, %eax
 movl $0, %ebx
 int $LINUX_SYSCALL
